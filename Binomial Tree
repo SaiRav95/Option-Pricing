@@ -1,0 +1,83 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from __future__ import division
+from math import *
+import scipy.stats
+
+def BOPF(data):
+    # Initial value
+    S = data['S']
+    X = data['X']
+    t = data['t'] ###Time to maturity
+    n = data['n']  ###n = Number of steps
+    s = data['s'] / 100  # convert from percentage to decimal (Sigma)
+    r = data['r'] / 100  #Risk-free rate
+    u = exp(s * sqrt(t / n)) ## Upward Probabilty
+    d = 1 / u   # d = exp(-s * sqrt(t / n)) ##Downward Probability 
+    r_ = r * t / n
+    R = exp(r_)
+    a = ceil(log(X / (S * (d ** n))) / log(u / d))  # Smallest int S_T >= X (Smallest value for getting a positive payoff)
+    p = (R - d) / (u - d)  # Risk-neutral probability
+
+    # European Options
+    CallSum1 = CallSum2 = 0
+    PutSum1 = PutSum2 = 0
+
+    for _ in range(int(a), n):
+        CallSum1 += scipy.stats.binom.pmf(_, n, p * u / R)#(Equation 27)
+        CallSum2 += scipy.stats.binom.pmf(_, n, p)
+
+    for _ in range(int(a)):
+        PutSum1 += scipy.stats.binom.pmf(_, n, p * u / R)
+        PutSum2 += scipy.stats.binom.pmf(_, n, p)
+
+    EuroCall = S * CallSum1 - X * exp(-r_ * n) * CallSum2 ##(Equation 27)
+    EuroPut = X * exp(-r_ * n) * PutSum2 - S * PutSum1
+
+    # America put
+    # Initialize Value at time t
+    PutValueFlow = [max(X - (S * (u ** (n-i)) * (d ** i)), 0) for i in range(n+1)]
+    CallValueFlow = [max((S * (u ** (n-i)) * (d ** i)) - X, 0) for i in range(n+1)]
+
+    # Run backward to time 0
+    for time in reversed(range(n)):
+        # Payoff of early exercise
+        PutEarlyExercise = [max(X - (S * (u ** (time-i)) * (d ** i)), 0) for i in range(time+1)]
+
+        callEarlyExercise = [max((S * (u ** (time-i)) * (d ** i)) - X, 0) for i in range(time+1)]
+        # Continuation value (Not Exercising)
+        PutValueFlow = [((p * PutValueFlow[i] + (1-p) * PutValueFlow[i+1]) / R) for i in range(time+1)]
+
+        CallValueFlow = [((p * CallValueFlow[i] + (1-p) * CallValueFlow[i+1]) / R) for i in range(time+1)]
+
+        # Find the larger value 0f 45 and 49
+        PutValueFlow = [max(PutEarlyExercise[i], PutValueFlow[i]) for i in range(len(PutValueFlow))]
+
+        CallValueFlow = [max(callEarlyExercise[i], CallValueFlow[i]) for i in range(len(CallValueFlow))]
+
+    # Output Information
+
+    outputs = [('European Call', str(EuroCall)),
+               ('European Put', str(EuroPut)),
+               ('American Call', str(CallValueFlow[0])),
+               ('American Put', str(PutValueFlow[0]))]
+
+    # Aligned output
+    print("S=%r, X=%r, s=%r%%, t=%r, n=%r, r=%r%%:" % (S, X, data['s'], t, n, data['r'])) #prints the variables
+    for output in outputs: #Prints the answer
+        print("- {item:13}: {value[0]:>4}.{value[1]:<12}".format(item=output[0], value=output[1].split('.') if '.' in output[1] else (output[1], '0')))
+
+
+import sys
+import json # Dictionary 
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        file_location = sys.argv[1].strip() #Sees file location
+        with open(file_location) as data_file: #opens the text file
+            data = json.load(data_file) #Read the file and makes it to a list of dictionary
+        for test in data:
+            BOPF(test) #for loop iterating 3 samples which we have
+        print ("-- end --")
+    else:
+        print('This requires an input file.  Please select one from the data \ directory. (e.g. python HW2.py ./data)')
