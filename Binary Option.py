@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[14]:
+
+
+##############Exotic Option - Binary Option######################
+
+####Pricing this is very simple if you know the formula for it####
+
+from scipy.stats import norm
+import math 
+
+S = float(input('Stock Price at time 0: ')) 
+K = float(input('Strike Price: '))
+T = float(input('Time to Maturity: ')) # % of a 365 day year
+r = float(input('Interest Rate: '))
+sigma = float(input('Annual Volatility: '))
+q = float(input('Continuous dividend yield: '))
+Q = float(input('Money you get if your asset price is above Strike Price: '))
+
+d1 = (math.log(S/K) + (r - q + 0.5*(sigma)**2)*T)/(sigma*(math.sqrt(T)))
+d2 = d1 - (sigma*(math.sqrt(T)))
+
+if S > K:
+    print('Price of the Binary Option is', Q*(math.exp(-r*T))*norm.cdf(d2))
+else:
+    print(0)
+    
+    
+
