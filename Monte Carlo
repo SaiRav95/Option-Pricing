@@ -1,0 +1,3 @@
+Created Random walks.
+When you run the program you will be getting the Option price computed by the Monte Carlo method.
+You will get the Black Scholes price also as a comparison to the Monte Carlo method and the standard error associated with it.
